@@ -18,6 +18,7 @@ A = rbind(
   c(-2, -1, 2, -3), 
   c(1, 2, 1, 6)
   )
+A
 ```
 
 ### 1) Montrer que les colonnes de A sont orthogonales. Préciser les calculs choisis
@@ -39,27 +40,15 @@ for (i in 1:4) {  #1:3
 print(result)
 
 ```
-Les colonnes de A sont donc biens orthogonales.
+Les produits scalaires étants nuls, les colonnes de A sont donc biens orthogonales.
 
 ### 2) Construire la matrice U en normant chaque colonne de A 
 
-```{r}
-print(A[,1])
-print(norm(as.matrix(A[,1]), type="2"))
-print(A[,2])
-print(norm(as.matrix(A[,2])))
-print(A[,3])
-print(norm(as.matrix(A[,3])))
-print(A[,4])
-print(norm(as.matrix(A[,4])))
-```
 
 ```{r}
 U = A
 A_norm = norm(A, type="2")
 print(A_norm)
-
-print(U)
 
 for (i in 1:length(U)){
   
@@ -68,38 +57,32 @@ for (i in 1:length(U)){
 
 print(U)
 ```
-### 3)
+### 3) Calculer U^t . U et U . U^t. En quoi différent-elles ?
 
 ```{r}
 U_t = t(U)
-
-print(U_t)
-
 print(U_t %*% U)
-
 print(U %*% U_t)
 ```
-### 4)
+U^t.U nous renvoie une matrice identité I4
+
+### 4) Choisir au hasard un vecteur y de R^8 et calculer p = U.U^t.y et z = y -p; Pourquoi p appartient à Col(A), l'espace vectoriel engendré par les vecteurs colonnes de A. Vérifiez que z est orthogonal à p.
 
 ```{r}
 y = c(1, 3, 7, 2, 6, 3, 9, 4)
-
 p = U %*% U_t %*% y
-
 z = y - p
 
 print(round(p[,1]%*%z[,1]))
 ```
+p étant combinaison linéaire de chacun des vecteurs, il appartient à Col(A)
 
-z et p sont bien orthogonaux entre eux. 
+z et p sont bien orthogonaux entre eux, car leur produit scalaire est nul.
 
 ### 5) Vérifier que z est othogonale à chaque colonne de U 
 
 ```{r}
 result = c()
-
-# print(dim(U)[1]) # 8
-# print(dim(U)[2]) # 4
 
 for (i in 1:dim(U)[2]) {
   result = append(result, round(z[,1] %*% U[,i]))
@@ -112,12 +95,9 @@ z est bien orthogonale à chaque colonne de U
 
 ### 6) Expliquez pourquoi z appartient à (Col(A)⊥)
 
-p combinaison lineaire de chacun des vecteurs de notre espace
-pseudo inverse
+notre espace pseudo inverse
 
 ### 7) Déterminer le point de Col(U) le plus proche de y = (1,1,1,1,1,1,1,1)
-
-Faire le projeté de y sur Col(U) puis calculer la distance euclidienne entre y' et y
 
 ```{r}
 # y' = (y.u1)u1 + ... + (y.up)up
@@ -125,15 +105,13 @@ Faire le projeté de y sur Col(U) puis calculer la distance euclidienne entre y'
 
 y_projete = U %*% U_t %*% c(1,1,1,1,1,1,1,1)
 y_projete
-
 ```
+
+### 8) Calculer la distance entre b=(1,1,1,1,1,1,1,1) et Col(U)
 
 ```{r}
 b = c(1,1,1,1,-1,-1,-1,-1)
 b_projete = U %*% U_t %*% b
-
-b_projete
-
 sqrt(sum((b_projete - b)^2))
 ```
 

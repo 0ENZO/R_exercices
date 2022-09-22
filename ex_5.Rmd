@@ -1,0 +1,141 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+require(ggplot2)
+require(zoo)
+```
+solution, projection (pas d'unicité de la solution)
+
+### 1)Tracer le graphe de cette série chronologique. En déduire le modèle approprié. Justifier.
+
+
+```{r}
+trimestres <- c("2018-T1","2018-T2","2018-T3","2018-T4","2019-T1","2019-T2","2019-T3","2019-T4","2020-T1","2020-T2","2020-T3","2020-T4","2021-T1","2021-T2","2021-T3","2021-T4")
+
+ventes_c <- c(4,3,5,22,3,4,6,21,2,4,6,24,3,4,7,26)
+df <- data.frame(time = trimestres, ventes = ventes_c)
+fmt <- "%Y-T%q"
+df$time<-as.yearqtr(df$time, format=fmt)
+
+ggplot(data=df, aes(x=time, y=ventes, group=1)) +
+  geom_line()+
+  geom_point()
+```
+
+### 2) Donner la droite d'ajustement affine par la méthode des moindres carrés. La tracer.
+
+```{r}
+trimestres_x <- 1:16
+#modele <- line(trimestres_x, ventes_c)
+#print(modele)
+
+a <- cov(x= trimestres_x, y=ventes_c)/var(trimestres_x)
+b <- mean(ventes_c - (a* mean(trimestres_x)))
+
+a
+b
+```
+
+```{r}
+#plot(trimestres_x, ventes_c, pch = 16, cex = 1.3, col = "blue", abline(line(trimestres_x, ventes_c)))
+plot(trimestres_x, ventes_c, pch=16, cex=1.3, col="blue", type="b")
+abline(b, a, col="red")
+```
+### 3)Donner les moyennes mobiles d'ordre 4, la tendance et les différences saisonnières de la série chronologique
+
+```{r}
+### Moyennes mobiles d'ordre 4
+mm_ordre_4 <- function(serie) {
+  mm <- c()
+  #calcule M3 à M14 // M1, M2, M15, M16 non calculables car il faut les deux valeurs précendentes et suivantes
+  for (i in 3:14){
+    mm <- c(mm, (1/8) * (serie[i-2] + 2*serie[i-1] + 2*serie[i] + 2*serie[i+1] + serie[i+2]))
+  }
+  return(mm)
+}
+moyennes_mobiles <- mm_ordre_4(ventes_c)
+moyennes_mobiles
+
+### Differences saisonnieres, ^St = Xt - Tt
+diff_saisonnieres <- function(serie, tendances) {
+  differences <- c()
+  for (i in 3:(length(serie) - 2)) {
+    differences <- append(differences, serie[i] - tendances[i-2])
+  }
+  
+  return(differences)
+}
+
+differences <- diff_saisonnieres(ventes_c, moyennes_mobiles)
+differences
+```
+
+### 4) Déterminer les coefficients saisonniers et la série désaisonnalisée 
+```{r}
+### Coefficients saisonniers, à diviser par 3 ou par 4 ? 
+
+coefficients_saisonniers.s1 <- (differences[3] + differences[7] + differences[11]) / 3
+coefficients_saisonniers.s2 <- (differences[4] + differences[8] + differences[12]) / 3
+coefficients_saisonniers.s3 <- (differences[1] + differences[5] + differences[9]) / 3
+coefficients_saisonniers.s4 <- (differences[2] + differences[6] + differences[10]) / 3
+
+S <- c(coefficients_saisonniers.s1, coefficients_saisonniers.s2, coefficients_saisonniers.s3, coefficients_saisonniers.s4)
+print("Coefficients saisonniers :")
+S
+
+### Coefficients saisonniers corrigés
+# St' = St - 1/T * (Somme des St pour t allant de 1 à T)
+
+coefficients_saisonniers_corriges <- function(S, T) {
+  S_prime <- c()
+  for (t in 1:4){
+    S_sum <- 0
+    for (T_cpt in 1:T){
+      S_sum <- S_sum + S[T_cpt]
+    }
+    S_prime <- c(S_prime, S[t] - 1/T * S_sum)
+  }
+  return (S_prime)
+}
+
+coef_saisonniers_corriges <- coefficients_saisonniers_corriges(S, 4)
+print("Coefficients saisonniers corriges:")
+coef_saisonniers_corriges
+
+serie_corrigee <- function(serie, coef_saisonniers_corriges){
+  serie_corrigee <- c()
+  for (i in 1:length(coef_saisonniers_corriges)) {
+    for (j in 1:4) {
+      serie_corrigee <- c(serie_corrigee, serie[i*j] - coef_saisonniers_corriges[i])
+    }
+  }
+  return (serie_corrigee)
+}
+serie_desaisonnalisee <- serie_corrigee(ventes_c, coef_saisonniers_corriges)
+```
+
+```{r}
+plot(trimestres_x, serie_desaisonnalisee, pch=16, cex=1.3, col="blue", type="b")
+```
+
+### 5) Faire un graphe et donner une prévision pour le quatrième trimestre 2022 ?
+
+```{r}
+t20 <- a * 20 + b + coef_saisonniers_corriges[4]
+t20
+```
+
+```{r}
+final_df <- data.frame(
+  Xt = ventes_c,
+  Mt = c(0, 0, 8.375, 8.375, 8.625, 8.625, 8.375, 8.250, 8.250, 8.625, 9.125, 9.250, 9.375, 9.750, 0, 0),
+  St_c = c(-6.083333,-5.000000, -2.958333, 13.708333, -6.083333,-5.000000, -2.958333, 13.708333, -6.083333,-5.000000, -2.958333, 13.708333, -6.083333,-5.000000, -2.958333, 13.708333),
+  St = c(-6.000000, -4.916667, -2.875000, 13.791667, -6.000000, -4.916667, -2.875000, 13.791667, -6.000000, -4.916667, -2.875000, 13.791667, -6.000000, -4.916667, -2.875000, 13.791667)
+  )
+
+df_transpose = t(final_df)
+df_transpose
+```
